@@ -111,7 +111,7 @@ public class CaillouxGui extends JPanel {
                 int x = i * tailleCellule;
                 int y = j * tailleCellule;
 
-                if (grille[i][j].hasCaillou()) {
+                if (grille[i][j].hasCaillou() && ((Pierre) grille[i][j]).getNbCailloux() > 0) {
                     g2d.setColor(Color.GRAY);  // Case avec un caillou
                 } else if (grille[i][j].isCaseVaisseau()) {
                     g2d.setColor(Color.BLACK); // Case recouverte par le vaisseau
