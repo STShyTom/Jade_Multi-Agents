@@ -4,7 +4,7 @@ public class Pierre extends Case {
 
     private int nbCailloux;
     public Pierre() {
-        super(true, true, false);
+        super(false, true, false);
         this.nbCailloux = (int)(Math.random() * 6) +1;
     }
 

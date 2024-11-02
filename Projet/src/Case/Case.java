@@ -2,25 +2,25 @@ package Case;
 
 public class Case {
 
-    private boolean accessible;
-    private boolean caillou;
-    private boolean robot;
+    private final boolean caseVaisseau;
+    private final boolean possedeCailloux;
+    private final boolean robot;
 
-    public Case(boolean accessible, boolean caillou, boolean robot) {
-        this.accessible = accessible;
-        this.caillou = caillou;
+    public Case(boolean vaisseau, boolean caillou, boolean robot) {
+        this.caseVaisseau = vaisseau;
+        this.possedeCailloux = caillou;
         this.robot = robot;
     }
 
-    public boolean isAccessible() {
-        return accessible;
+    public boolean isCaseVaisseau() {
+        return caseVaisseau;
     }
 
-    public boolean isCaillou() {
-        return caillou;
+    public boolean hasCaillou() {
+        return possedeCailloux;
     }
 
-    public boolean isRobot() {
+    public boolean hasRobot() {
         return robot;
     }
 }
