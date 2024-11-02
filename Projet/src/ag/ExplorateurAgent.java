@@ -46,7 +46,7 @@ public class ExplorateurAgent extends Agent {
                 if (carteGUI.getGrille(position.x,position.y).getClass() == Pierre.class && !doitRepartir) { // Tas de pierres trouvé
                     ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
                     msg.addReceiver(getAID("superviseur"));
-                    msg.setContent("Tas de pierres trouvé en : (" + position.x + ", " + position.y + ")");
+                    msg.setContent("PositionTas :" + position.x + "," + position.y);
                     //System.out.println(msg.getContent());
                     send(msg);
                     enAttente = true;

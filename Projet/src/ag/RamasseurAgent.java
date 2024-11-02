@@ -16,6 +16,7 @@ public class RamasseurAgent extends Agent {
     private int id;
     // Position de l'agent sur la carte
     private Point position;
+    private Point positionDepart;
     // Niveau de batterie de l'agent
     private int batterie = 100;
     private boolean enMission = false;
@@ -23,8 +24,19 @@ public class RamasseurAgent extends Agent {
     @Override
     protected void setup() {
         carteGUI = (CaillouxGui) getArguments()[0];
+        id = Integer.parseInt(getLocalName().substring(9));
         this.position = new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1);
+        this.positionDepart = new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1);
         addBehaviour(new RamassageBehaviour());
+
+    }
+
+    public boolean isEnMission() {
+        return enMission;
+    }
+
+    public Point getPosition() {
+        return position;
     }
 
     private class RamassageBehaviour extends CyclicBehaviour {
@@ -34,13 +46,13 @@ public class RamasseurAgent extends Agent {
             if (msg != null) {
                 // Réception d'une position de tas à ramasser
                 if (msg.getPerformative() == ACLMessage.REQUEST &&
-                        msg.getSender().getLocalName().equals("superviseur")) {
+                        msg.getSender().getLocalName().equals("superviseur") && msg.getContent().contains("DemandeCollecte")) {
                     String messageRecu = msg.getContent();
                     // Récupère les coordonnées du tas de pierres
-                    String coordonnees = messageRecu.substring(32);
+                    String coordonnees = messageRecu.split(":")[1];
                     positionTas = new Point(
-                            Integer.parseInt(coordonnees.substring(1, coordonnees.indexOf(','))),
-                            Integer.parseInt(coordonnees.substring(coordonnees.indexOf(',') + 2, coordonnees.length() - 1))
+                            Integer.parseInt(coordonnees.split(",")[0]),
+                            Integer.parseInt(coordonnees.split(",")[1])
                     );
                     enMission = true;
                 }
@@ -58,8 +70,15 @@ public class RamasseurAgent extends Agent {
                     positionTas = null;
 
                     // Retourne au vaisseau pour déposer les cailloux
-                    deplacement(new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1));
-                    carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
+                    while (!position.equals(positionDepart)) {
+                        deplacement(positionDepart);
+                        carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
+                        try {
+                            Thread.sleep(2000);  // Ajoute un délai de 500 ms pour chaque mouvement
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     enMission = false;
                     System.out.println(getLocalName() + " est retourné au vaisseau");
 
@@ -73,7 +92,7 @@ public class RamasseurAgent extends Agent {
             }
 
             try {
-                Thread.sleep(500);  // Ajoute un délai de 500 ms pour chaque mouvement
+                Thread.sleep(2000);  // Ajoute un délai de 500 ms pour chaque mouvement
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -88,9 +107,7 @@ public class RamasseurAgent extends Agent {
                 position.x++;
             } else if (position.x > destination.x) {
                 position.x--;
-            }
-
-            if (position.y < destination.y) {
+            } else if (position.y < destination.y) {
                 position.y++;
             } else if (position.y > destination.y) {
                 position.y--;

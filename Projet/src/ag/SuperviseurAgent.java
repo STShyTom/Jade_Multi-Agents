@@ -33,14 +33,14 @@ public class SuperviseurAgent extends Agent {
             ACLMessage msg = receive();
             if (msg != null) {
                 // Message reçu de l'explorateur pour signaler un tas de pierres
-                if ( msg.getPerformative() == ACLMessage.INFORM &&
-                        msg.getSender().getLocalName().contains("explorateur") ) {
+                if (msg.getPerformative() == ACLMessage.INFORM &&
+                        msg.getSender().getLocalName().contains("explorateur")) {
                     String messageRecu = msg.getContent();
                     // Récupère les coordonnées du tas de pierres
-                    String coordonnees = messageRecu.substring(27);
+                    String coordonnees = messageRecu.split(":")[1];
                     Point position = new Point(
-                            Integer.parseInt(coordonnees.substring(1, coordonnees.indexOf(','))),
-                            Integer.parseInt(coordonnees.substring(coordonnees.indexOf(',') + 2, coordonnees.length() - 1))
+                            Integer.parseInt(coordonnees.split(",")[0]),
+                            Integer.parseInt(coordonnees.split(",")[1])
                     );
                     if (!tasPierres.contains(position)) {
                         tasPierres.add(position);
@@ -54,6 +54,7 @@ public class SuperviseurAgent extends Agent {
                 // Réception de la confirmation d'un ramasseur
                 if (msg.getPerformative() == ACLMessage.CONFIRM) {
                     System.out.println("Confirmation de collecte reçue de " + msg.getSender().getLocalName());
+                    ramasseurs.add(msg.getSender().getLocalName());
                 }
             } else {
                 block();
@@ -65,16 +66,18 @@ public class SuperviseurAgent extends Agent {
      * Comportement pour gérer l'envoi des missions de collecte aux ramasseurs
      */
     private class GestionRamasseursBehaviour extends CyclicBehaviour {
+
         public void action() {
             // Des tas de pierres sont détectés et des ramasseurs sont disponibles
             if (!tasPierres.isEmpty() && !ramasseurs.isEmpty()) {
-                Point tas = tasPierres.removeFirst();
-                String ramasseur = ramasseurs.removeFirst();
+                Point tas = tasPierres.remove(0);
+                String ramasseur = ramasseurs.remove(0);
                 ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
                 mission.addReceiver(getAID(ramasseur));
-                mission.setContent("Tas de pierres à collecter en : (" + tas.x + ", " + tas.y + ")");
+                mission.setContent("DemandeCollecte :" + tas.x + "," + tas.y);
                 send(mission);
                 System.out.println("Mission de collecte envoyée à " + ramasseur);
+
             }
         }
     }

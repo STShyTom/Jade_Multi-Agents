@@ -150,14 +150,12 @@ public class CaillouxGui extends JPanel {
         dessinerAgent(g2d, superviseur, Color.PINK, "S");
 
         // Dessine les explorateurs
-        g2d.setColor(Color.GREEN);
-        for (Point explorer : explorateurs) {
-            dessinerAgent(g2d, explorer, Color.GREEN, "E" + explorateurs.indexOf(explorer));
+        for(int i = 0; i < explorateurs.size(); i++){
+            dessinerAgent(g2d, explorateurs.get(i), Color.GREEN, "E" + i);
         }
         // Dessine les ramasseurs
-        g2d.setColor(Color.BLUE);
-        for (Point ramasseur : ramasseurs) {
-            dessinerAgent(g2d, ramasseur, Color.BLUE, "R" + ramasseurs.indexOf(ramasseur));
+        for(int i = 0; i< ramasseurs.size(); i++){
+            dessinerAgent(g2d, ramasseurs.get(i), Color.BLUE, "R" + i);
         }
     }
 
