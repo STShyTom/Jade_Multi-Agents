@@ -1,6 +1,6 @@
 package ag;
 
-import Case.Pierre;
+import Case.Case;
 import gui.CaillouxGui;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -43,7 +43,7 @@ public class ExplorateurAgent extends Agent {
 
             if (position.x < carteGUI.getWidth() / carteGUI.getTailleCellule() &&
                     position.y < carteGUI.getHeight() / carteGUI.getTailleCellule()) {
-                if (carteGUI.getGrille(position.x,position.y).getClass() == Pierre.class && !doitRepartir) { // Tas de pierres trouvé
+                if (carteGUI.getGrille(position.x,position.y).getNbCailloux() > 0 && !doitRepartir) { // Tas de pierres trouvé
                     ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
                     msg.addReceiver(getAID("superviseur"));
                     msg.setContent("PositionTas :" + position.x + "," + position.y);

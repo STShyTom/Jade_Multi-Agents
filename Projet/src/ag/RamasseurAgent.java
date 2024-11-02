@@ -1,5 +1,6 @@
 package ag;
 
+import Case.Case;
 import gui.CaillouxGui;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -19,24 +20,20 @@ public class RamasseurAgent extends Agent {
     private Point positionDepart;
     // Niveau de batterie de l'agent
     private int batterie = 100;
+    private static int nbCaillouxTotal = 0;
     private boolean enMission = false;
 
     @Override
     protected void setup() {
         carteGUI = (CaillouxGui) getArguments()[0];
-        id = Integer.parseInt(getLocalName().substring(9));
+        this.id = Integer.parseInt(getLocalName().substring(9));
         this.position = new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1);
         this.positionDepart = new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1);
         addBehaviour(new RamassageBehaviour());
-
     }
 
-    public boolean isEnMission() {
-        return enMission;
-    }
-
-    public Point getPosition() {
-        return position;
+    public static int getNbCaillouxTotal() {
+        return nbCaillouxTotal;
     }
 
     private class RamassageBehaviour extends CyclicBehaviour {
@@ -59,28 +56,38 @@ public class RamasseurAgent extends Agent {
             } else if (enMission) {
                 // Si l'agent est arrivé à la position du tas
                 if (position.equals(positionTas)) {
-                    // Ramasse le tas de cailloux
-                    // TODO
-                    System.out.println(getLocalName() + " a ramassé le tas de cailloux en " + positionTas);
-                    // Envoyer une confirmation au superviseur
-                    ACLMessage confirm = new ACLMessage(ACLMessage.CONFIRM);
-                    confirm.addReceiver(getAID("superviseur"));
-                    confirm.setContent("Tas de cailloux ramassé en : (" + position.x + ", " + position.y + ")");
-                    send(confirm);
-                    positionTas = null;
+                    // Ramasse des cailloux du tas
+                    Case casePierres = carteGUI.getGrille(position.x, position.y);
+                    int nbCaillouxTas = casePierres.getNbCailloux();
+                    // Nombre de cailloux possédés par l'agent
+                    int nbCaillouxPossedes = Math.min(3, nbCaillouxTas);
+                    casePierres.setNbCailloux(nbCaillouxTas - nbCaillouxPossedes);
+
+                    // S'il ne reste plus de cailloux dans le tas
+                    if (casePierres.getNbCailloux() == 0) {
+                        // La mission est terminée.
+                        enMission = false;
+                        positionTas = null;
+                        // Envoyer une confirmation au superviseur
+                        ACLMessage confirm = new ACLMessage(ACLMessage.CONFIRM);
+                        confirm.addReceiver(getAID("superviseur"));
+                        confirm.setContent("CaillouxRecup :" + position.x + "," + position.y);
+                        send(confirm);
+                    }
 
                     // Retourne au vaisseau pour déposer les cailloux
                     while (!position.equals(positionDepart)) {
                         deplacement(positionDepart);
                         carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
                         try {
-                            Thread.sleep(2000);  // Ajoute un délai de 500 ms pour chaque mouvement
+                            Thread.sleep(2000);  // Ajoute un délai d'2s pour chaque mouvement (plus lourd donc plus de temps)
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
-                    enMission = false;
-                    System.out.println(getLocalName() + " est retourné au vaisseau");
+
+                    // Dépose les cailloux au vaisseau
+                    nbCaillouxTotal += nbCaillouxPossedes;
 
                 } else {
                     // Déplacement vers le tas de cailloux
@@ -92,7 +99,7 @@ public class RamasseurAgent extends Agent {
             }
 
             try {
-                Thread.sleep(2000);  // Ajoute un délai de 500 ms pour chaque mouvement
+                Thread.sleep(1000);  // Ajoute un délai d'1s pour chaque mouvement
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

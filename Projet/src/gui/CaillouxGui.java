@@ -1,7 +1,6 @@
 package gui;
 
-import Case.*;
-
+import Case.Case;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -80,10 +79,12 @@ public class CaillouxGui extends JPanel {
             for (int j = 0; j < hauteur; j++) {
                 // Vérifie si la case est recouverte par le vaisseau
                 if (casesVaisseau.contains(new Point(i, j))) {
-                    grille[i][j] = new Case(true, false, false); // Case vide
+                    grille[i][j] = new Case(true, 0, false); // Case vide
                 // Choisit au hasard si la case contient des cailloux
                 } else {
-                    grille[i][j] = Math.random() < 0.3 ? new Pierre() : new Case(false, false, false);
+                    int nbCailloux = (int) (Math.random() * 6) + 1;
+                    grille[i][j] = Math.random() < 0.3 ? new Case(false, nbCailloux, false) : new Case(false, 0, false);
+                    System.out.println(Math.random());
                 }
             }
         }
@@ -94,7 +95,7 @@ public class CaillouxGui extends JPanel {
             explorateurs.add(new Point(longueur / 2, hauteur / 2));
         }
         // Positionne les ramasseurs au centre de la carte
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 5; i++) {
             ramasseurs.add(new Point((longueur / 2) - 1, (hauteur / 2) - 1));
         }
     }
@@ -105,24 +106,6 @@ public class CaillouxGui extends JPanel {
     private void initialiseMapLayer() {
         mapLayer = new BufferedImage(longueur * tailleCellule, hauteur * tailleCellule, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = mapLayer.createGraphics();
-
-        for (int i = 0; i < longueur; i++) {
-            for (int j = 0; j < hauteur; j++) {
-                int x = i * tailleCellule;
-                int y = j * tailleCellule;
-
-                if (grille[i][j].hasCaillou()) {
-                    g2d.setColor(Color.GRAY);  // Case avec un caillou
-                } else if (grille[i][j].isCaseVaisseau()) {
-                    g2d.setColor(Color.BLACK); // Case recouverte par le vaisseau
-                } else {
-                    g2d.setColor(Color.WHITE); // Case vide
-                }
-                g2d.fillRect(x, y, tailleCellule, tailleCellule);
-                g2d.setColor(Color.BLACK);
-                g2d.drawRect(x, y, tailleCellule, tailleCellule);
-            }
-        }
         g2d.dispose();  // Libère les ressources graphiques
     }
 
@@ -136,6 +119,25 @@ public class CaillouxGui extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
 
         g2d.drawImage(mapLayer, 0, 0, null);
+
+        // Dessine les cases de la grille
+        for (int i = 0; i < longueur; i++) {
+            for (int j = 0; j < hauteur; j++) {
+                int x = i * tailleCellule;
+                int y = j * tailleCellule;
+
+                if (grille[i][j].getNbCailloux() > 0) {
+                    g2d.setColor(Color.GRAY);  // Case avec un caillou
+                } else if (grille[i][j].isCaseVaisseau()) {
+                    g2d.setColor(Color.BLACK); // Case recouverte par le vaisseau
+                } else {
+                    g2d.setColor(Color.WHITE); // Case vide
+                }
+                g2d.fillRect(x, y, tailleCellule, tailleCellule);
+                g2d.setColor(Color.BLACK);
+                g2d.drawRect(x, y, tailleCellule, tailleCellule);
+            }
+        }
 
         // Dessine le vaisseau au milieu en le redimensionnant
         int centreX = (longueur / 2 - 1) * tailleCellule;
@@ -181,8 +183,8 @@ public class CaillouxGui extends JPanel {
 
     /**
      * Déplace les explorateurs sur la carte
-     * @param newX Nouvelle position en x
-     * @param newY Nouvelle position en y
+     * @param newX Nouvelle position en x.
+     * @param newY Nouvelle position en y.
      */
     public void deplaceExplorateur(int explorerIndex, int newX, int newY) {
         explorateurs.get(explorerIndex).move(newX, newY);
@@ -190,8 +192,8 @@ public class CaillouxGui extends JPanel {
 
     /**
      * Déplace les ramasseurs sur la carte
-     * @param newX Nouvelle position en x
-     * @param newY Nouvelle position en y
+     * @param newX Nouvelle position en x.
+     * @param newY Nouvelle position en y.
      */
     public void deplaceRamasseur(int ramasseurIndex, int newX, int newY) {
         ramasseurs.get(ramasseurIndex).move(newX, newY);

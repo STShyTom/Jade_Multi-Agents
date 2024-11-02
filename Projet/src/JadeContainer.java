@@ -26,7 +26,7 @@ public class JadeContainer {
             }
 
             // Création des ramasseurs
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 5; i++) {
                 AgentController ramasseur = cc.createNewAgent("ramasseur" + i, RamasseurAgent.class.getName(), argsGUI);
                 ramasseur.start();
             }

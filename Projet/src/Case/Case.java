@@ -2,24 +2,25 @@ package Case;
 
 public class Case {
 
-    private final boolean caseVaisseau;
-    private final boolean possedeCailloux;
-    private final boolean robot;
+    protected final boolean caseVaisseau;
+    protected final boolean robot;
+    protected int nbCailloux;
 
-    public Case(boolean vaisseau, boolean caillou, boolean robot) {
+    public Case(boolean vaisseau, int caillou, boolean robot) {
         this.caseVaisseau = vaisseau;
-        this.possedeCailloux = caillou;
+        this.nbCailloux = caillou;
         this.robot = robot;
     }
 
     public boolean isCaseVaisseau() {
         return caseVaisseau;
     }
-
-    public boolean hasCaillou() {
-        return possedeCailloux;
+    public int getNbCailloux() {
+        return nbCailloux;
     }
-
+    public void setNbCailloux(int nbCailloux) {
+        this.nbCailloux = nbCailloux;
+    }
     public boolean hasRobot() {
         return robot;
     }
