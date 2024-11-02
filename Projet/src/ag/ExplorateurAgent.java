@@ -20,12 +20,14 @@ public class ExplorateurAgent extends Agent {
     // Niveau de batterie de l'agent
     private int batterie = 100;
     private boolean enAttente = false;
+    private Point positionDepart;
 
     @Override
     protected void setup() {
         this.carteGUI = (CaillouxGui) getArguments()[0];
         this.id = Integer.parseInt(getLocalName().substring(11));
         this.position = new Point(carteGUI.getLongueur() / 2, carteGUI.getHauteur() / 2);
+        this.positionDepart = new Point(carteGUI.getLongueur() / 2, carteGUI.getHauteur() / 2);
         addBehaviour(new ExplorationBehaviour()); // Comportement pour explorer la carte
         addBehaviour(new AttenteConfirmationBehaviour()); // Comportement pour gérer la confirmation
     }
@@ -40,7 +42,14 @@ public class ExplorateurAgent extends Agent {
             if (enAttente) {
                 return;
             }
-
+            if(position.equals(positionDepart)){
+                try {
+                    Thread.sleep(5000);  // Ajoute un délai de 500 ms pour chaque mouvement
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                batterie = 100;
+            }
             if (position.x < carteGUI.getWidth() / carteGUI.getTailleCellule() &&
                     position.y < carteGUI.getHeight() / carteGUI.getTailleCellule()) {
                 if (carteGUI.getGrille(position.x,position.y).getNbCailloux() > 0 && !doitRepartir) { // Tas de pierres trouvé
@@ -68,40 +77,56 @@ public class ExplorateurAgent extends Agent {
         /**
          * Permet de déplacer l'explorateur sur la carte de manière aléatoire
          */
-        public void deplacement(){
-            int direction = (int) (Math.random() * 4);
-            switch (direction) {
-                case 0: // Droite
-                    if ((position.x < carteGUI.getWidth() / carteGUI.getTailleCellule() - 1) &&
-                        ! carteGUI.getCasesVaisseau().contains(new Point(position.x + 1, position.y))) {
-                        position.x++;
-                    } else {
-                        deplacement();
-                    }
-                    break;
-                case 1: // Bas
-                    if ((position.y < carteGUI.getHeight() / carteGUI.getTailleCellule() - 1) &&
-                        ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y + 1))) {
-                        position.y++;
-                    } else {
-                        deplacement();
-                    }
-                    break;
-                case 2: // Gauche
-                    if ((position.x > 0) && ! carteGUI.getCasesVaisseau().contains(new Point(position.x - 1, position.y))) {
-                        position.x--;
-                    } else {
-                        deplacement();
-                    }
-                    break;
-                case 3: // Haut
-                    if ((position.y > 0) && ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y - 1))) {
-                        position.y--;
-                    } else {
-                        deplacement();
-                    }
-                    break;
+        public void deplacement() {
+            if(batterie == 0){
+                //TODO : envoie message au superviseur pour dire que l'explorateur est mort
+            } else if(batterie < 20){
+                if (position.x < positionDepart.x) {
+                    position.x++;
+                } else if (position.x > positionDepart.x) {
+                    position.x--;
+                } else if (position.y < positionDepart.y) {
+                    position.y++;
+                } else if (position.y > positionDepart.y) {
+                    position.y--;
+                }
+            }else{
+                int direction = (int) (Math.random() * 4);
+                switch (direction) {
+                    case 0: // Droite
+                        if ((position.x < carteGUI.getWidth() / carteGUI.getTailleCellule() - 1) &&
+                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x + 1, position.y))) {
+                            position.x++;
+                        } else {
+                            deplacement();
+                        }
+                        break;
+                    case 1: // Bas
+                        if ((position.y < carteGUI.getHeight() / carteGUI.getTailleCellule() - 1) &&
+                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y + 1))) {
+                            position.y++;
+                        } else {
+                            deplacement();
+                        }
+                        break;
+                    case 2: // Gauche
+                        if ((position.x > 0) && ! carteGUI.getCasesVaisseau().contains(new Point(position.x - 1, position.y))) {
+                            position.x--;
+                        } else {
+                            deplacement();
+                        }
+                        break;
+                    case 3: // Haut
+                        if ((position.y > 0) && ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y - 1))) {
+                            position.y--;
+                        } else {
+                            deplacement();
+                        }
+                        break;
+                }
+                batterie--;
             }
+
         }
     }
 
