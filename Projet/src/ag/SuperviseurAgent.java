@@ -146,6 +146,7 @@ public class SuperviseurAgent extends Agent {
                 mission.setContent("DemandeRecharge :" + positionAgentEnPanne.x + "," + positionAgentEnPanne.y + ";" + agentEnPanne);
                 send(mission);
                 System.out.println("Mission de recharge envoyée à " + superChargeur + " pour l'agent en " + positionAgentEnPanne);
+                agentsEnPanne.remove(agentEnPanne);
             }
         }
     }

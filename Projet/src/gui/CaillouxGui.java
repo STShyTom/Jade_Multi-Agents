@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Classe qui gère l'affichage de la carte, des robots et des cailloux
@@ -60,7 +61,7 @@ public class CaillouxGui extends JPanel {
 
         // Chargement des images
         try {
-            imageVaisseau = ImageIO.read(new File("Images/vaisseau.png"));
+            imageVaisseau = ImageIO.read(Objects.requireNonNull(getClass().getResource("/Images/vaisseau.png")));
             // Redimensionne l'image du vaisseau
         } catch (IOException e) {
             e.printStackTrace();

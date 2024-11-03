@@ -19,10 +19,11 @@ public class RamasseurAgent extends Agent {
     private Point position;
     private Point positionDepart;
     // Niveau de batterie de l'agent
-    private int batterie = 100;
+    private int batterie = 50;
     private static int nbCaillouxTotal = 0;
     private boolean enAttente = false;
     private boolean enMission = false;
+    private int nbCaillouxPossedes = 0;
 
     @Override
     protected void setup() {
@@ -47,13 +48,13 @@ public class RamasseurAgent extends Agent {
             }
 
             // Si l'agent est à la base, recharge la batterie
-            if (position.equals(positionDepart) && batterie < 100) {
+            if (position.equals(positionDepart) && batterie < 50) {
                 try {
                     Thread.sleep(5000);  // Ajoute un délai de 5s pour se recharger
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                batterie = 100;
+                batterie = 50;
             }
 
             ACLMessage msg = receive();
@@ -77,8 +78,14 @@ public class RamasseurAgent extends Agent {
                     Case casePierres = carteGUI.getGrille(position.x, position.y);
                     int nbCaillouxTas = casePierres.getNbCailloux();
                     // Nombre de cailloux possédés par l'agent
-                    int nbCaillouxPossedes = Math.min(3, nbCaillouxTas);
+                    nbCaillouxPossedes = Math.min(3, nbCaillouxTas);
                     casePierres.setNbCailloux(nbCaillouxTas - nbCaillouxPossedes);
+                    try {
+                        Thread.sleep(2000);  // Ajoute un délai d'2s pour le ramassage
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    batterie-= 3; // Consomme de la batterie
 
                     // S'il ne reste plus de cailloux dans le tas
                     if (casePierres.getNbCailloux() == 0) {
@@ -128,7 +135,7 @@ public class RamasseurAgent extends Agent {
          */
         private void deplacement(Point destination) {
             // Si la batterie est à 0, appel à l'aide
-            if (batterie == 0) {
+            if (batterie <= 0 && !enAttente) {
                 ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
                 msg.addReceiver(getAID("superviseur"));
                 msg.setContent("DemandeAide :" + position.x + "," + position.y);
@@ -136,8 +143,8 @@ public class RamasseurAgent extends Agent {
                 enAttente = true;
                 System.out.println("Agent " + getLocalName() + " envoie une demande d'aide");
 
-            // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
-            } else if(batterie < 20) {
+                // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
+            } else if (batterie>0 && batterie <= 20) {
                 if (position.x < positionDepart.x) {
                     position.x++;
                 } else if (position.x > positionDepart.x) {
@@ -147,8 +154,9 @@ public class RamasseurAgent extends Agent {
                 } else if (position.y > positionDepart.y) {
                     position.y--;
                 }
-                batterie--; // Consomme de la batterie
-            } else {
+                batterie -= 1 + nbCaillouxPossedes; // Consomme de la batterie
+                System.out.println("Agent " + getLocalName() + " à " + batterie*2 + "% de batterie");
+            } else if(batterie>20){
                 if (position.x < destination.x) {
                     position.x++;
                 } else if (position.x > destination.x) {
@@ -158,7 +166,8 @@ public class RamasseurAgent extends Agent {
                 } else if (position.y > destination.y) {
                     position.y--;
                 }
-                batterie = batterie - 2; // Consomme de la batterie
+                batterie -= 1 + nbCaillouxPossedes; // Consomme de la batterie
+                System.out.println("Agent " + getLocalName() + " à " + batterie*2 + "% de batterie");
             }
         }
     }
@@ -172,7 +181,7 @@ public class RamasseurAgent extends Agent {
                 ACLMessage msg = receive();
                 // Attend qu'on me partage de la batterie
                 if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
-                    batterie += Integer.parseInt(msg.getContent());
+                    batterie = Integer.parseInt(msg.getContent().split(":")[1]);
                     enAttente = false;
                 }
             }

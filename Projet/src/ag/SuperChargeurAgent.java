@@ -18,7 +18,7 @@ public class SuperChargeurAgent extends Agent {
     private Point position;
     private Point positionDepart;
     // Niveau de batterie de l'agent
-    private int batterie = 200;
+    private int batterie = 100;
     private boolean enAttente = false;
     private boolean enMission = false;
 
@@ -37,6 +37,7 @@ public class SuperChargeurAgent extends Agent {
      */
     private class RechargeBehaviour extends CyclicBehaviour {
         private Point positionRobotEnPanne;
+        private String nomRobotEnPanne;
 
         public void action() {
             // Bloque l'exploration si l'agent attend une confirmation ou d'être rechargé
@@ -45,7 +46,7 @@ public class SuperChargeurAgent extends Agent {
             }
 
             // Si l'agent est à la base, recharge la batterie
-            if (position.equals(positionDepart) && batterie < 200) {
+            if (position.equals(positionDepart) && batterie < 100) {
                 try {
                     Thread.sleep(5000);  // Ajoute un délai de 5s pour se recharger
                 } catch (InterruptedException e) {
@@ -63,21 +64,35 @@ public class SuperChargeurAgent extends Agent {
                     String messageRecu = msg.getContent();
                     // Récupère les coordonnées du robot
                     String coordonnees = messageRecu.split(":")[1];
+                    coordonnees = coordonnees.split(";")[0];
                     positionRobotEnPanne = new Point(
                             Integer.parseInt(coordonnees.split(",")[0]),
                             Integer.parseInt(coordonnees.split(",")[1])
                     );
+                    nomRobotEnPanne = messageRecu.split(";")[1];
                     enMission = true;
                 }
             } else if (enMission) {
                 // Si l'agent est arrivé à la position du robot en panne
                 if (position.equals(positionRobotEnPanne)) {
                     // Partage sa batterie avec le.s robot.s en panne
-                    // TODO : Récupérer le nom du robot en panne à ma case et lui envoyer le message
+
                     ACLMessage msgBatterie = new ACLMessage(ACLMessage.PROPOSE);
-                    //msgBatterie.addReceiver(getAID();
-                    msgBatterie.setContent("PartageBatterie :" + batterie);
+                    msgBatterie.addReceiver(getAID(nomRobotEnPanne));
+                    msgBatterie.setContent("PartageBatterie :" + Math.floorDiv(batterie, 2));
                     send(msgBatterie);
+                    batterie = Math.floorDiv(batterie, 2);
+                    System.out.println("Agent " + getLocalName() + " partage sa batterie avec " + nomRobotEnPanne + " : " + batterie);
+
+                    while (!position.equals(positionDepart)) {
+                        deplacement(positionDepart);
+                        carteGUI.deplaceChargeur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
+                        try {
+                            Thread.sleep(1000);  // Ajoute un délai d'1s
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     enMission = false;
 
                 } else {
