@@ -1,6 +1,5 @@
 package ag;
 
-import Case.Case;
 import gui.CaillouxGui;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -61,12 +60,8 @@ public class SuperviseurAgent extends Agent {
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[0]),
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[1])
                     );
-                    int nbCaillouxTas =  carteGUI.getGrille(positionTas.x, positionTas.y).getNbCailloux();
-                    if (nbCaillouxTas > 0) {
-                        tasPierres.put(positionTas, false); // Le tas n'est plus en cours de collecte
-                    } else {
-                        tasPierres.remove(positionTas); // Il n'y a plus de cailloux dans le tas
-                    }
+                    // Il n'y a plus de cailloux dans le tas, le ramasseur peut repartir ailleurs
+                    tasPierres.remove(positionTas);
                     ramasseurs.add(msg.getSender().getLocalName());
                 }
             } else {

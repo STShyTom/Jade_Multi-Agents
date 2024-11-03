@@ -31,6 +31,12 @@ public class JadeContainer {
                 ramasseur.start();
             }
 
+            // Création des superchargeurs
+            for (int i = 0; i < 2; i++) {
+                AgentController superchargeur = cc.createNewAgent("superchargeur" + i, SuperChargeurAgent.class.getName(), argsGUI);
+                superchargeur.start();
+            }
+
             // Création du superviseur
             AgentController superviseur = cc.createNewAgent("superviseur", SuperviseurAgent.class.getName(), argsGUI);
             superviseur.start();

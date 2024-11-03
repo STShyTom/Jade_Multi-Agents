@@ -26,6 +26,7 @@ public class CaillouxGui extends JPanel {
     // Liste des agents (explorateurs, ramasseurs, chargeurs, superviseur)
     private final List<Point> explorateurs = new ArrayList<>();
     private final List<Point> ramasseurs = new ArrayList<>();
+    private final List<Point> superChargeurs = new ArrayList<>();
     private Point superviseur;
 
     // Images
@@ -82,9 +83,8 @@ public class CaillouxGui extends JPanel {
                     grille[i][j] = new Case(true, 0, false); // Case vide
                 // Choisit au hasard si la case contient des cailloux
                 } else {
-                    int nbCailloux = (int) (Math.random() * 6) + 1;
+                    int nbCailloux = (int) (Math.random() * 9) + 1;
                     grille[i][j] = Math.random() < 0.3 ? new Case(false, nbCailloux, false) : new Case(false, 0, false);
-                    System.out.println(Math.random());
                 }
             }
         }
@@ -92,11 +92,15 @@ public class CaillouxGui extends JPanel {
         superviseur = new Point(longueur / 2, hauteur / 2);
         // Positionne les explorateurs au centre de la carte
         for (int i = 0; i < 3; i++) {
-            explorateurs.add(new Point(longueur / 2, hauteur / 2));
+            explorateurs.add(new Point(longueur / 2, (hauteur / 2) - 1));
         }
         // Positionne les ramasseurs au centre de la carte
         for (int i = 0; i < 5; i++) {
             ramasseurs.add(new Point((longueur / 2) - 1, (hauteur / 2) - 1));
+        }
+        // Positionne les chargeurs au centre de la carte
+        for (int i = 0; i < 2; i++) {
+            superChargeurs.add(new Point((longueur / 2) - 1, (hauteur / 2)));
         }
     }
 
@@ -159,6 +163,10 @@ public class CaillouxGui extends JPanel {
         for(int i = 0; i< ramasseurs.size(); i++){
             dessinerAgent(g2d, ramasseurs.get(i), Color.BLUE, "R" + i);
         }
+        // Dessine les chargeurs
+        for(int i = 0; i< superChargeurs.size(); i++){
+            dessinerAgent(g2d, superChargeurs.get(i), Color.ORANGE, "C" + i);
+        }
     }
 
     /**
@@ -197,6 +205,15 @@ public class CaillouxGui extends JPanel {
      */
     public void deplaceRamasseur(int ramasseurIndex, int newX, int newY) {
         ramasseurs.get(ramasseurIndex).move(newX, newY);
+    }
+
+    /**
+     * Déplace les chargeurs sur la carte
+     * @param newX Nouvelle position en x.
+     * @param newY Nouvelle position en y.
+     */
+    public void deplaceChargeur(int chargeurIndex, int newX, int newY) {
+        superChargeurs.get(chargeurIndex).move(newX, newY);
     }
 
     /**

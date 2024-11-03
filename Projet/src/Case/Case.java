@@ -2,9 +2,9 @@ package Case;
 
 public class Case {
 
-    protected final boolean caseVaisseau;
-    protected final boolean robot;
-    protected int nbCailloux;
+    private final boolean caseVaisseau;
+    private final boolean robot;
+    private int nbCailloux;
 
     public Case(boolean vaisseau, int caillou, boolean robot) {
         this.caseVaisseau = vaisseau;

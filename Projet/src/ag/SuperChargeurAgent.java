@@ -9,9 +9,9 @@ import jade.lang.acl.ACLMessage;
 import java.awt.*;
 
 /**
- * Agent ramasseur qui récupère les cailloux
+ * Agent super chargeur qui recharge les agents en batterie
  */
-public class RamasseurAgent extends Agent {
+public class SuperChargeurAgent extends Agent {
     private CaillouxGui carteGUI;
     // Identifiant de l'agent
     private int id;
@@ -19,27 +19,26 @@ public class RamasseurAgent extends Agent {
     private Point position;
     private Point positionDepart;
     // Niveau de batterie de l'agent
-    private int batterie = 100;
-    private static int nbCaillouxTotal = 0;
+    private int batterie = 200;
     private boolean enAttente = false;
     private boolean enMission = false;
 
     @Override
     protected void setup() {
-        carteGUI = (CaillouxGui) getArguments()[0];
-        this.id = Integer.parseInt(getLocalName().substring(9));
-        this.position = new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1);
-        this.positionDepart = new Point((carteGUI.getLongueur() / 2) - 1, (carteGUI.getHauteur() / 2) - 1);
-        addBehaviour(new RamassageBehaviour()); // Comportement pour ramasser les cailloux
+        this.carteGUI = (CaillouxGui) getArguments()[0];
+        this.id = Integer.parseInt(getLocalName().substring(13));
+        this.position = new Point((carteGUI.getLongueur() / 2) - 1, carteGUI.getHauteur() / 2);
+        this.positionDepart = new Point((carteGUI.getLongueur() / 2) - 1, carteGUI.getHauteur() / 2);
+        addBehaviour(new RechargeBehaviour()); // Comportement pour recharger les agents
         //addBehaviour(new AttenteBatterieBehaviour()); // Comportement pour gérer l'attente d'un partage de batterie
     }
 
-    public static int getNbCaillouxTotal() {
-        return nbCaillouxTotal;
-    }
+    /**
+     * Comportement pour recharge les agents en panne
+     */
+    private class RechargeBehaviour extends CyclicBehaviour {
+        private Point positionRobotEnPanne;
 
-    private class RamassageBehaviour extends CyclicBehaviour {
-        private Point positionTas;
         public void action() {
             // Bloque l'exploration si l'agent attend une confirmation ou d'être rechargé
             if (enAttente) {
@@ -47,7 +46,7 @@ public class RamasseurAgent extends Agent {
             }
 
             // Si l'agent est à la base, recharge la batterie
-            if (position.equals(positionDepart) && batterie < 100) {
+            if (position.equals(positionDepart) && batterie < 200) {
                 try {
                     Thread.sleep(5000);  // Ajoute un délai de 5s pour se recharger
                 } catch (InterruptedException e) {
@@ -56,60 +55,36 @@ public class RamasseurAgent extends Agent {
                 batterie = 100;
             }
 
+            // Si un agent est en panne, recharge sa batterie
             ACLMessage msg = receive();
             if (msg != null) {
-                // Réception d'une position de tas à ramasser
+                // Réception d'une position de robot à aller aider
                 if (msg.getPerformative() == ACLMessage.REQUEST &&
-                        msg.getSender().getLocalName().equals("superviseur") && msg.getContent().contains("DemandeCollecte")) {
+                        msg.getSender().getLocalName().equals("superviseur") && msg.getContent().contains("DemandeRecharge")) {
                     String messageRecu = msg.getContent();
-                    // Récupère les coordonnées du tas de pierres
+                    // Récupère les coordonnées du robot
                     String coordonnees = messageRecu.split(":")[1];
-                    positionTas = new Point(
+                    positionRobotEnPanne = new Point(
                             Integer.parseInt(coordonnees.split(",")[0]),
                             Integer.parseInt(coordonnees.split(",")[1])
                     );
                     enMission = true;
                 }
             } else if (enMission) {
-                // Si l'agent est arrivé à la position du tas
-                if (position.equals(positionTas)) {
-                    // Ramasse des cailloux du tas
-                    Case casePierres = carteGUI.getGrille(position.x, position.y);
-                    int nbCaillouxTas = casePierres.getNbCailloux();
-                    // Nombre de cailloux possédés par l'agent
-                    int nbCaillouxPossedes = Math.min(3, nbCaillouxTas);
-                    casePierres.setNbCailloux(nbCaillouxTas - nbCaillouxPossedes);
-
-                    // S'il ne reste plus de cailloux dans le tas
-                    if (casePierres.getNbCailloux() == 0) {
-                        // La mission est terminée.
-                        enMission = false;
-                        positionTas = null;
-                        // Envoyer une confirmation au superviseur
-                        ACLMessage confirm = new ACLMessage(ACLMessage.CONFIRM);
-                        confirm.addReceiver(getAID("superviseur"));
-                        confirm.setContent("CaillouxRecup :" + position.x + "," + position.y);
-                        send(confirm);
-                    }
-
-                    // Retourne au vaisseau pour déposer les cailloux
-                    while (!position.equals(positionDepart)) {
-                        deplacement(positionDepart);
-                        carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
-                        try {
-                            Thread.sleep(2000);  // Ajoute un délai d'2s pour chaque mouvement (plus lourd donc plus de temps)
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    // Dépose les cailloux au vaisseau
-                    nbCaillouxTotal += nbCaillouxPossedes;
+                // Si l'agent est arrivé à la position du robot en panne
+                if (position.equals(positionRobotEnPanne)) {
+                    // Partage sa batterie avec le.s robot.s en panne
+                    // TODO : Récupérer le nom du robot en panne à ma case et lui envoyer le message
+                    ACLMessage msgBatterie = new ACLMessage(ACLMessage.PROPOSE);
+                    //msgBatterie.addReceiver(getAID();
+                    msgBatterie.setContent("PartageBatterie :" + batterie);
+                    send(msgBatterie);
+                    enMission = false;
 
                 } else {
-                    // Déplacement vers le tas de cailloux
-                    deplacement(positionTas);
-                    carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
+                    // Déplacement vers le robot en panne
+                    deplacement(positionRobotEnPanne);
+                    carteGUI.deplaceChargeur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
                 }
             } else {
                 block();
@@ -136,7 +111,7 @@ public class RamasseurAgent extends Agent {
                 enAttente = true;
                 System.out.println("Agent " + getLocalName() + " envoie une demande d'aide");
 
-                // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
+            // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
             } else if(batterie < 20) {
                 if (position.x < positionDepart.x) {
                     position.x++;
