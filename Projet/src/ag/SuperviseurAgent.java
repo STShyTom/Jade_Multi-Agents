@@ -13,9 +13,10 @@ import java.util.HashMap;
  * Agent superviseur qui gère la communication entre les agents
  */
 public class SuperviseurAgent extends Agent {
-    private CaillouxGui carteGUI;
     // Liste des tas de pierres trouvés avec leur position et s'ils sont en cours de collecte
     private HashMap<Point, Boolean> tasPierres = new HashMap<>();
+    // Liste des agents en panne avec leur position
+    private HashMap<String,Point> agentsEnPanne = new HashMap<>();
     // Liste des ramasseurs
     private ArrayList<String> ramasseurs = new ArrayList<>();
     // Liste des superchargeurs
@@ -25,22 +26,22 @@ public class SuperviseurAgent extends Agent {
 
     @Override
     protected void setup() {
-        this.carteGUI = (CaillouxGui) getArguments()[0];
         for (int i = 0; i < 5; i++) {
             ramasseurs.add("ramasseur" + i);
         }
         for (int i = 0; i < 2; i++) {
             superChargeurs.add("superchargeur" + i);
         }
-        addBehaviour(new ReceptionCaillouBehaviour());
+        addBehaviour(new ReceptionMessageBehaviour());
         addBehaviour(new GestionRamasseursBehaviour());
-        addBehaviour(new DemandeAideBehaviour());
+        addBehaviour(new GestionSuperchargeursBehaviour());
     }
 
     /**
-     * Comportement pour gérer la réception des tas de pierres et des confirmations des ramasseurs
+     * Comportement pour gérer la réception des messages
      */
-    private class ReceptionCaillouBehaviour extends CyclicBehaviour {
+    private class ReceptionMessageBehaviour extends CyclicBehaviour {
+
         public void action() {
             ACLMessage msg = receive();
             if (msg != null) {
@@ -63,7 +64,7 @@ public class SuperviseurAgent extends Agent {
                     send(reply);
                 }
                 // Réception de la confirmation d'un ramasseur
-                if (msg.getPerformative() == ACLMessage.CONFIRM) {
+                else if (msg.getPerformative() == ACLMessage.CONFIRM) {
                     Point positionTas = new Point(
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[0]),
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[1])
@@ -71,6 +72,17 @@ public class SuperviseurAgent extends Agent {
                     // Il n'y a plus de cailloux dans le tas, le ramasseur peut repartir ailleurs
                     tasPierres.remove(positionTas);
                     ramasseurs.add(msg.getSender().getLocalName());
+                }
+                // Réception d'une demande de recharge
+                if (msg.getPerformative() == ACLMessage.REQUEST &&
+                        msg.getContent().contains("DemandeAide")) {
+                    // Récupère les coordonnées de l'agent en panne
+                    String coordonnees = msg.getContent().split(":")[1];
+                    Point positionRobotEnPanne = new Point(
+                            Integer.parseInt(coordonnees.split(",")[0]),
+                            Integer.parseInt(coordonnees.split(",")[1])
+                    );
+                    agentsEnPanne.put(msg.getSender().getLocalName(), positionRobotEnPanne);
                 }
             } else {
                 block();
@@ -118,33 +130,20 @@ public class SuperviseurAgent extends Agent {
     }
 
     /**
-     * Comportement pour gérer les demandes d'aide des agents
+     * Comportement pour gérer l'envoi des missions de recharge aux superchargeurs
      */
-    private class DemandeAideBehaviour extends CyclicBehaviour {
-        private HashMap<String,Point> agentsEnPanne = new HashMap<>();
+    private class GestionSuperchargeursBehaviour extends CyclicBehaviour {
+
         @Override
         public void action() {
-            ACLMessage msg = receive();
-            if (msg != null) {
-                // Réception d'une demande de recharge
-                if (msg.getPerformative() == ACLMessage.REQUEST &&
-                        msg.getContent().contains("DemandeAide")) {
-                    // Récupère les coordonnées de l'agent en panne
-                    String coordonnees = msg.getContent().split(":")[1];
-                    Point positionRobotEnPanne = new Point(
-                            Integer.parseInt(coordonnees.split(",")[0]),
-                            Integer.parseInt(coordonnees.split(",")[1])
-                    );
-                    agentsEnPanne.put(msg.getSender().getLocalName(), positionRobotEnPanne);
-                }
-            }
             // Envoie un superchargeur si un agent est en panne
             if (!agentsEnPanne.isEmpty() && !superChargeurs.isEmpty()) {
                 String superChargeur = superChargeurs.remove(0);
-                Point positionAgentEnPanne = agentsEnPanne.get(agentsEnPanne.keySet().toArray()[0]);
+                String agentEnPanne = agentsEnPanne.keySet().iterator().next();
+                Point positionAgentEnPanne = agentsEnPanne.get(agentEnPanne);
                 ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
                 mission.addReceiver(getAID(superChargeur));
-                mission.setContent("DemandeRecharge :" + positionAgentEnPanne.x + "," + positionAgentEnPanne.y);
+                mission.setContent("DemandeRecharge :" + positionAgentEnPanne.x + "," + positionAgentEnPanne.y + ";" + agentEnPanne);
                 send(mission);
                 System.out.println("Mission de recharge envoyée à " + superChargeur + " pour l'agent en " + positionAgentEnPanne);
             }
