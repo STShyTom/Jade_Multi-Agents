@@ -31,7 +31,7 @@ public class RamasseurAgent extends Agent {
         this.position = new Point(carteGUI.getLongueur() / 2 - 1, carteGUI.getHauteur() / 2 - 1);
         this.positionDepart = new Point((carteGUI.getLongueur() / 2) - 1, (carteGUI.getHauteur() / 2) - 1);
         addBehaviour(new RamassageBehaviour()); // Comportement pour ramasser les cailloux
-        //addBehaviour(new AttenteBatterieBehaviour()); // Comportement pour gérer l'attente d'un partage de batterie
+        addBehaviour(new AttenteBatterieBehaviour()); // Comportement pour gérer l'attente d'un partage de batterie
     }
 
     public static int getNbCaillouxTotal() {
@@ -136,7 +136,7 @@ public class RamasseurAgent extends Agent {
                 enAttente = true;
                 System.out.println("Agent " + getLocalName() + " envoie une demande d'aide");
 
-                // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
+            // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
             } else if(batterie < 20) {
                 if (position.x < positionDepart.x) {
                     position.x++;
@@ -147,6 +147,7 @@ public class RamasseurAgent extends Agent {
                 } else if (position.y > positionDepart.y) {
                     position.y--;
                 }
+                batterie--; // Consomme de la batterie
             } else {
                 if (position.x < destination.x) {
                     position.x++;
@@ -157,6 +158,7 @@ public class RamasseurAgent extends Agent {
                 } else if (position.y > destination.y) {
                     position.y--;
                 }
+                batterie = batterie - 2; // Consomme de la batterie
             }
         }
     }
@@ -166,11 +168,13 @@ public class RamasseurAgent extends Agent {
      */
     private class AttenteBatterieBehaviour extends CyclicBehaviour {
         public void action() {
-            ACLMessage msg = receive();
-            // Attend qu'on me partage de la batterie
-            if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
-                batterie += Integer.parseInt(msg.getContent());
-                enAttente = false;
+            if (enAttente) {
+                ACLMessage msg = receive();
+                // Attend qu'on me partage de la batterie
+                if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
+                    batterie += Integer.parseInt(msg.getContent());
+                    enAttente = false;
+                }
             }
         }
     }

@@ -18,6 +18,8 @@ public class SuperviseurAgent extends Agent {
     private HashMap<Point, Boolean> tasPierres = new HashMap<>();
     // Liste des ramasseurs
     private ArrayList<String> ramasseurs = new ArrayList<>();
+    // Liste des superchargeurs
+    private ArrayList<String> superChargeurs = new ArrayList<>();
     // Nombre de cailloux total ramassé
     private int nbCaillouxRamasses = 0;
 
@@ -27,10 +29,17 @@ public class SuperviseurAgent extends Agent {
         for (int i = 0; i < 5; i++) {
             ramasseurs.add("ramasseur" + i);
         }
+        for (int i = 0; i < 2; i++) {
+            superChargeurs.add("superchargeur" + i);
+        }
         addBehaviour(new ReceptionCaillouBehaviour());
         addBehaviour(new GestionRamasseursBehaviour());
+        addBehaviour(new DemandeAideBehaviour());
     }
 
+    /**
+     * Comportement pour gérer la réception des tas de pierres et des confirmations des ramasseurs
+     */
     private class ReceptionCaillouBehaviour extends CyclicBehaviour {
         public void action() {
             ACLMessage msg = receive();
@@ -52,7 +61,6 @@ public class SuperviseurAgent extends Agent {
                     ACLMessage reply = msg.createReply();
                     reply.setPerformative(ACLMessage.CONFIRM);
                     send(reply);
-                    //System.out.println("Confirmation pour repartir");
                 }
                 // Réception de la confirmation d'un ramasseur
                 if (msg.getPerformative() == ACLMessage.CONFIRM) {
@@ -93,7 +101,7 @@ public class SuperviseurAgent extends Agent {
                 }
             }
             if (tasNonCollecte && !ramasseurs.isEmpty()) {
-                String ramasseur = ramasseurs.removeFirst();
+                String ramasseur = ramasseurs.remove(0);
                 ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
                 mission.addReceiver(getAID(ramasseur));
                 mission.setContent("DemandeCollecte :" + tas.x + "," + tas.y);
@@ -105,6 +113,40 @@ public class SuperviseurAgent extends Agent {
                 Thread.sleep(1000);  // Ajoute un délai d'1 s pour chaque mouvement
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Comportement pour gérer les demandes d'aide des agents
+     */
+    private class DemandeAideBehaviour extends CyclicBehaviour {
+        private HashMap<String,Point> agentsEnPanne = new HashMap<>();
+        @Override
+        public void action() {
+            ACLMessage msg = receive();
+            if (msg != null) {
+                // Réception d'une demande de recharge
+                if (msg.getPerformative() == ACLMessage.REQUEST &&
+                        msg.getContent().contains("DemandeAide")) {
+                    // Récupère les coordonnées de l'agent en panne
+                    String coordonnees = msg.getContent().split(":")[1];
+                    Point positionRobotEnPanne = new Point(
+                            Integer.parseInt(coordonnees.split(",")[0]),
+                            Integer.parseInt(coordonnees.split(",")[1])
+                    );
+                    agentsEnPanne.put(msg.getSender().getLocalName(), positionRobotEnPanne);
+                }
+            }
+            // Envoie un superchargeur si un agent est en panne
+            if (!agentsEnPanne.isEmpty() && !superChargeurs.isEmpty()) {
+                String superChargeur = superChargeurs.remove(0);
+                Point positionAgentEnPanne = agentsEnPanne.get(agentsEnPanne.keySet().toArray()[0]);
+                ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
+                mission.addReceiver(getAID(superChargeur));
+                mission.setContent("DemandeRecharge :" + positionAgentEnPanne.x + "," + positionAgentEnPanne.y);
+                send(mission);
+                System.out.println("Mission de recharge envoyée à " + superChargeur + " pour l'agent en " + positionAgentEnPanne);
             }
         }
     }

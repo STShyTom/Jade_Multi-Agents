@@ -1,6 +1,5 @@
 package ag;
 
-import Case.Case;
 import gui.CaillouxGui;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -30,7 +29,7 @@ public class SuperChargeurAgent extends Agent {
         this.position = new Point((carteGUI.getLongueur() / 2) - 1, carteGUI.getHauteur() / 2);
         this.positionDepart = new Point((carteGUI.getLongueur() / 2) - 1, carteGUI.getHauteur() / 2);
         addBehaviour(new RechargeBehaviour()); // Comportement pour recharger les agents
-        //addBehaviour(new AttenteBatterieBehaviour()); // Comportement pour gérer l'attente d'un partage de batterie
+        addBehaviour(new AttenteBatterieBehaviour()); // Comportement pour gérer l'attente d'un partage de batterie
     }
 
     /**
@@ -122,6 +121,7 @@ public class SuperChargeurAgent extends Agent {
                 } else if (position.y > positionDepart.y) {
                     position.y--;
                 }
+                batterie--; // Consomme de la batterie
             } else {
                 if (position.x < destination.x) {
                     position.x++;
@@ -132,6 +132,7 @@ public class SuperChargeurAgent extends Agent {
                 } else if (position.y > destination.y) {
                     position.y--;
                 }
+                batterie--; // Consomme de la batterie
             }
         }
     }
@@ -141,11 +142,13 @@ public class SuperChargeurAgent extends Agent {
      */
     private class AttenteBatterieBehaviour extends CyclicBehaviour {
         public void action() {
-            ACLMessage msg = receive();
-            // Attend qu'on me partage de la batterie
-            if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
-                batterie += Integer.parseInt(msg.getContent());
-                enAttente = false;
+            if (enAttente) {
+                ACLMessage msg = receive();
+                // Attend qu'on me partage de la batterie
+                if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
+                    batterie += Integer.parseInt(msg.getContent());
+                    enAttente = false;
+                }
             }
         }
     }

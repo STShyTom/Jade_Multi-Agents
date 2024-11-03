@@ -43,7 +43,7 @@ public class ExplorateurAgent extends Agent {
                 return;
             }
             // Si l'agent est à la base, recharge la batterie
-            if (position.equals(positionDepart)) {
+            if (position.equals(positionDepart) && batterie < 100) {
                 try {
                     Thread.sleep(5000);  // Ajoute un délai de 5s pour se recharger
                 } catch (InterruptedException e) {
@@ -62,7 +62,6 @@ public class ExplorateurAgent extends Agent {
             } else {
                 deplacement(); // Déplace l'explorateur
                 carteGUI.deplaceExplorateur(id, position.x, position.y); // Met à jour la position de l'explorateur sur la carte
-                batterie--; // Consomme de la batterie
                 doitRepartir = false;
             }
 
@@ -96,6 +95,7 @@ public class ExplorateurAgent extends Agent {
                 } else if (position.y > positionDepart.y) {
                     position.y--;
                 }
+                batterie--; // Consomme de la batterie
             } else {
                 int direction = (int) (Math.random() * 4);
                 switch (direction) {
@@ -130,21 +130,23 @@ public class ExplorateurAgent extends Agent {
                         }
                         break;
                 }
-                batterie--;
+                batterie--; // Consomme de la batterie
             }
         }
     }
 
     private class AttenteBehaviour extends CyclicBehaviour {
         public void action() {
-            ACLMessage msg = receive();
-            // Attend la confirmation du superviseur pour reprendre l'exploration
-            if (msg != null && msg.getPerformative() == ACLMessage.CONFIRM) {
-                enAttente = false;
-            // Attend un partage de batterie d'un chargeur
-            } else if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
-                batterie += Integer.parseInt(msg.getContent());
-                enAttente = false;
+            if (enAttente) {
+                ACLMessage msg = receive();
+                // Attend la confirmation du superviseur pour reprendre l'exploration
+                if (msg != null && msg.getPerformative() == ACLMessage.CONFIRM) {
+                    enAttente = false;
+                // Attend un partage de batterie d'un chargeur
+                } else if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
+                    batterie += Integer.parseInt(msg.getContent());
+                    enAttente = false;
+                }
             }
         }
     }
