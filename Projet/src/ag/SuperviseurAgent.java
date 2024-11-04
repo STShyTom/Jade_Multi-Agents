@@ -1,6 +1,6 @@
 package ag;
 
-import gui.CaillouxGui;
+import Utils.ClasseUtils;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
@@ -14,13 +14,13 @@ import java.util.HashMap;
  */
 public class SuperviseurAgent extends Agent {
     // Liste des tas de pierres trouvés avec leur position et s'ils sont en cours de collecte
-    private HashMap<Point, Boolean> tasPierres = new HashMap<>();
+    private final HashMap<Point, Boolean> tasPierres = new HashMap<>();
     // Liste des agents en panne avec leur position
-    private HashMap<String,Point> agentsEnPanne = new HashMap<>();
+    private final HashMap<String,Point> agentsEnPanne = new HashMap<>();
     // Liste des ramasseurs
-    private ArrayList<String> ramasseurs = new ArrayList<>();
+    private final ArrayList<String> ramasseurs = new ArrayList<>();
     // Liste des superchargeurs
-    private ArrayList<String> superChargeurs = new ArrayList<>();
+    private final ArrayList<String> superChargeurs = new ArrayList<>();
     // Nombre de cailloux total ramassé
     private int nbCaillouxRamasses = 0;
 
@@ -47,7 +47,7 @@ public class SuperviseurAgent extends Agent {
             if (msg != null) {
                 // Message reçu de l'explorateur pour signaler un tas de pierres
                 if (msg.getPerformative() == ACLMessage.INFORM &&
-                        msg.getSender().getLocalName().contains("explorateur")) {
+                        msg.getContent().contains("PositionTas")) {
                     // Récupère les coordonnées du tas de pierres
                     String coordonnees = msg.getContent().split(":")[1];
                     Point position = new Point(
@@ -64,7 +64,8 @@ public class SuperviseurAgent extends Agent {
                     send(reply);
                 }
                 // Réception de la confirmation d'un ramasseur
-                else if (msg.getPerformative() == ACLMessage.CONFIRM) {
+                else if (msg.getPerformative() == ACLMessage.CONFIRM &&
+                        msg.getSender().getLocalName().contains("ramasseur")) {
                     Point positionTas = new Point(
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[0]),
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[1])
@@ -74,7 +75,7 @@ public class SuperviseurAgent extends Agent {
                     ramasseurs.add(msg.getSender().getLocalName());
                 }
                 // Réception d'une demande de recharge
-                if (msg.getPerformative() == ACLMessage.REQUEST &&
+                else if (msg.getPerformative() == ACLMessage.REQUEST &&
                         msg.getContent().contains("DemandeAide")) {
                     // Récupère les coordonnées de l'agent en panne
                     String coordonnees = msg.getContent().split(":")[1];
@@ -84,14 +85,14 @@ public class SuperviseurAgent extends Agent {
                     );
                     agentsEnPanne.put(msg.getSender().getLocalName(), positionRobotEnPanne);
                 }
-            } else {
-                block();
+                // Réception de la confirmation d'un superchargeur
+                else if (msg.getPerformative() == ACLMessage.CONFIRM &&
+                        msg.getSender().getLocalName().contains("superchargeur")) {
+                    superChargeurs.add(msg.getSender().getLocalName());
+                }
             }
-            try {
-                Thread.sleep(500);  // Ajoute un délai de 500 ms pour chaque mouvement
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+
+            ClasseUtils.sleep(500);
         }
     }
 
@@ -108,24 +109,19 @@ public class SuperviseurAgent extends Agent {
                 if (!tasPierres.get(t)) {
                     tasNonCollecte = true;
                     tas = t;
-                    tasPierres.put(t, true);
                     break;
                 }
             }
             if (tasNonCollecte && !ramasseurs.isEmpty()) {
+                tasPierres.put(tas, true);
                 String ramasseur = ramasseurs.remove(0);
                 ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
                 mission.addReceiver(getAID(ramasseur));
                 mission.setContent("DemandeCollecte :" + tas.x + "," + tas.y);
                 send(mission);
-                System.out.println("Mission de collecte envoyée à " + ramasseur + " pour le tas en " + tas);
 
             }
-            try {
-                Thread.sleep(1000);  // Ajoute un délai d'1 s pour chaque mouvement
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            ClasseUtils.sleep(1000);
         }
     }
 
@@ -141,12 +137,13 @@ public class SuperviseurAgent extends Agent {
                 String superChargeur = superChargeurs.remove(0);
                 String agentEnPanne = agentsEnPanne.keySet().iterator().next();
                 Point positionAgentEnPanne = agentsEnPanne.get(agentEnPanne);
+                agentsEnPanne.remove(agentEnPanne);
+                // Envoie un message de mission
                 ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
                 mission.addReceiver(getAID(superChargeur));
                 mission.setContent("DemandeRecharge :" + positionAgentEnPanne.x + "," + positionAgentEnPanne.y + ";" + agentEnPanne);
                 send(mission);
                 System.out.println("Mission de recharge envoyée à " + superChargeur + " pour l'agent en " + positionAgentEnPanne);
-                agentsEnPanne.remove(agentEnPanne);
             }
         }
     }

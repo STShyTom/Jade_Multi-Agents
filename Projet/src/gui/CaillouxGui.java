@@ -5,7 +5,6 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,8 +29,8 @@ public class CaillouxGui extends JPanel {
     private final List<Point> superChargeurs = new ArrayList<>();
     private Point superviseur;
 
-    // Images
     private BufferedImage imageVaisseau;
+    private JLabel labelNbCailloux = new JLabel("0");
 
     /**
      * Crée une nouvelle carte de la taille spécifiée
@@ -50,12 +49,26 @@ public class CaillouxGui extends JPanel {
         JFrame frame = new JFrame("Carte des Robots et des Cailloux");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.add(this); // Ajout du JPanel au JFrame
+
+        // Ajout d'un label pour afficher le nombre de cailloux ramassés
+        JPanel panel = new JPanel();
+        panel.setPreferredSize(new Dimension(longueur * tailleCellule, 50));
+        panel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        JLabel label = new JLabel("Nombre de cailloux ramassés : ");
+        label.setFont(new Font("Arial", Font.PLAIN, 20));
+        labelNbCailloux.setFont(new Font("Arial", Font.BOLD, 20));
+        panel.add(label);
+        panel.add(labelNbCailloux);
+        frame.add(panel, BorderLayout.SOUTH);
+
         frame.pack(); // Ajuste la taille de la fenêtre automatiquement
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
-        Timer timer = new Timer(200, e -> {
-            repaint(); // Rafraîchit l'affichage toutes les 200 ms
+
+
+        Timer timer = new Timer(100, e -> {
+            repaint(); // Rafraîchit l'affichage toutes les 100 ms
         });
         timer.start();
 
@@ -81,11 +94,17 @@ public class CaillouxGui extends JPanel {
             for (int j = 0; j < hauteur; j++) {
                 // Vérifie si la case est recouverte par le vaisseau
                 if (casesVaisseau.contains(new Point(i, j))) {
-                    grille[i][j] = new Case(true, 0, false); // Case vide
+                    grille[i][j] = new Case(true, 0, true); // Case vide
                 // Choisit au hasard si la case contient des cailloux
                 } else {
-                    int nbCailloux = (int) (Math.random() * 9) + 1;
-                    grille[i][j] = Math.random() < 0.3 ? new Case(false, nbCailloux, false) : new Case(false, 0, false);
+                    // Place aléatoirement des cases obstacles
+                    if (Math.random() < 0.1) {
+                        grille[i][j] = new Case(false, 0, false);
+                    // Place aléatoirement des cases cailloux
+                    } else {
+                        int nbCailloux = (int) (Math.random() * 6) + 1;
+                        grille[i][j] = Math.random() < 0.3 ? new Case(false, nbCailloux, true) : new Case(false, 0, true);
+                    }
                 }
             }
         }
@@ -134,7 +153,9 @@ public class CaillouxGui extends JPanel {
                 if (grille[i][j].getNbCailloux() > 0) {
                     g2d.setColor(Color.GRAY);  // Case avec un caillou
                 } else if (grille[i][j].isCaseVaisseau()) {
-                    g2d.setColor(Color.BLACK); // Case recouverte par le vaisseau
+                    g2d.setColor(Color.lightGray); // Case recouverte par le vaisseau
+                } else if(!grille[i][j].isAccessible()) {
+                    g2d.setColor(Color.BLACK); // Case obstacle
                 } else {
                     g2d.setColor(Color.WHITE); // Case vide
                 }
@@ -215,6 +236,14 @@ public class CaillouxGui extends JPanel {
      */
     public void deplaceChargeur(int chargeurIndex, int newX, int newY) {
         superChargeurs.get(chargeurIndex).move(newX, newY);
+    }
+
+    /**
+     * Met à jour le nombre de cailloux ramassés
+     * @param nbCailloux Nombre de cailloux ramassés
+     */
+    public void setNbCailloux(int nbCailloux) {
+        labelNbCailloux.setText(String.valueOf(nbCailloux));
     }
 
     /**

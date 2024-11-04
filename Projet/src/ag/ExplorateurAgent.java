@@ -1,5 +1,6 @@
 package ag;
 
+import Utils.ClasseUtils;
 import gui.CaillouxGui;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -17,7 +18,8 @@ public class ExplorateurAgent extends Agent {
     // Position de l'agent sur la carte
     private Point position;
     // Niveau de batterie de l'agent
-    private int batterie = 100;
+    private int batterie = 60;
+    private final int batterieMax = 60;
     private boolean enAttente = false;
     private Point positionDepart;
 
@@ -42,13 +44,9 @@ public class ExplorateurAgent extends Agent {
                 return;
             }
             // Si l'agent est à la base, recharge la batterie
-            if (position.equals(positionDepart) && batterie < 100) {
-                try {
-                    Thread.sleep(5000);  // Ajoute un délai de 5s pour se recharger
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                batterie = 100;
+            if (position.equals(positionDepart) && batterie < batterieMax) {
+                ClasseUtils.sleep(4000);  // Ajoute un délai de 4s pour se recharger
+                batterie = batterieMax;
             }
             // Si un tas de pierres est trouvé, envoie la position au superviseur
             if (carteGUI.getGrille(position.x,position.y).getNbCailloux() > 0 && !doitRepartir) { // Tas de pierres trouvé
@@ -64,11 +62,7 @@ public class ExplorateurAgent extends Agent {
                 doitRepartir = false;
             }
 
-            try {
-                Thread.sleep(500);  // Ajoute un délai de 500 ms pour chaque mouvement
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            ClasseUtils.sleep(1000); // Ajoute un délai de 1s entre chaque action
         }
         /**
          * Permet de déplacer l'explorateur sur la carte de manière aléatoire
@@ -83,24 +77,18 @@ public class ExplorateurAgent extends Agent {
                 enAttente = true;
                 System.out.println("Agent " + getLocalName() + " envoie une demande d'aide");
 
-                // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
-            } else if(batterie < 20) {
-                if (position.x < positionDepart.x) {
-                    position.x++;
-                } else if (position.x > positionDepart.x) {
-                    position.x--;
-                } else if (position.y < positionDepart.y) {
-                    position.y++;
-                } else if (position.y > positionDepart.y) {
-                    position.y--;
-                }
+            // Si la batterie est inférieure à 10, l'explorateur retourne à la base pour se recharger
+            } else if(batterie > 0 && batterie <= 10) {
+                ClasseUtils.deplacement(position, positionDepart, carteGUI);
                 batterie--; // Consomme de la batterie
+
             } else {
                 int direction = (int) (Math.random() * 4);
                 switch (direction) {
                     case 0: // Droite
                         if ((position.x < carteGUI.getWidth() / carteGUI.getTailleCellule() - 1) &&
-                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x + 1, position.y))) {
+                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x + 1, position.y)) &&
+                                carteGUI.getGrille(position.x + 1, position.y).isAccessible()) {
                             position.x++;
                         } else {
                             deplacement();
@@ -108,21 +96,26 @@ public class ExplorateurAgent extends Agent {
                         break;
                     case 1: // Bas
                         if ((position.y < carteGUI.getHeight() / carteGUI.getTailleCellule() - 1) &&
-                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y + 1))) {
+                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y + 1)) &&
+                                carteGUI.getGrille(position.x, position.y + 1).isAccessible()) {
                             position.y++;
                         } else {
                             deplacement();
                         }
                         break;
                     case 2: // Gauche
-                        if ((position.x > 0) && ! carteGUI.getCasesVaisseau().contains(new Point(position.x - 1, position.y))) {
+                        if ((position.x > 0) &&
+                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x - 1, position.y)) &&
+                                carteGUI.getGrille(position.x - 1, position.y).isAccessible()) {
                             position.x--;
                         } else {
                             deplacement();
                         }
                         break;
                     case 3: // Haut
-                        if ((position.y > 0) && ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y - 1))) {
+                        if ((position.y > 0) &&
+                                ! carteGUI.getCasesVaisseau().contains(new Point(position.x, position.y - 1)) &&
+                                carteGUI.getGrille(position.x, position.y - 1).isAccessible()) {
                             position.y--;
                         } else {
                             deplacement();

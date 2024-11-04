@@ -3,13 +3,13 @@ package Case;
 public class Case {
 
     private final boolean caseVaisseau;
-    private final boolean robot;
+    private final boolean isAccessible;
     private int nbCailloux;
 
-    public Case(boolean vaisseau, int caillou, boolean robot) {
+    public Case(boolean vaisseau, int caillou, boolean isAccessible) {
         this.caseVaisseau = vaisseau;
         this.nbCailloux = caillou;
-        this.robot = robot;
+        this.isAccessible = isAccessible;
     }
 
     public boolean isCaseVaisseau() {
@@ -21,7 +21,7 @@ public class Case {
     public void setNbCailloux(int nbCailloux) {
         this.nbCailloux = nbCailloux;
     }
-    public boolean hasRobot() {
-        return robot;
+    public boolean isAccessible() {
+        return isAccessible;
     }
 }

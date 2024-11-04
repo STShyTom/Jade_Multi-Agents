@@ -1,6 +1,7 @@
 package ag;
 
 import Case.Case;
+import Utils.ClasseUtils;
 import gui.CaillouxGui;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
@@ -19,7 +20,8 @@ public class RamasseurAgent extends Agent {
     private Point position;
     private Point positionDepart;
     // Niveau de batterie de l'agent
-    private int batterie = 50;
+    private int batterie = 70;
+    private final int batterieMax = 70;
     private static int nbCaillouxTotal = 0;
     private boolean enAttente = false;
     private boolean enMission = false;
@@ -35,97 +37,88 @@ public class RamasseurAgent extends Agent {
         addBehaviour(new AttenteBatterieBehaviour()); // Comportement pour gérer l'attente d'un partage de batterie
     }
 
-    public static int getNbCaillouxTotal() {
-        return nbCaillouxTotal;
-    }
-
     private class RamassageBehaviour extends CyclicBehaviour {
         private Point positionTas;
         public void action() {
-            // Bloque l'exploration si l'agent attend une confirmation ou d'être rechargé
+            // Empêche le ramassage si l'agent attend une confirmation ou d'être rechargé
             if (enAttente) {
-                return;
-            }
-
-            // Si l'agent est à la base, recharge la batterie
-            if (position.equals(positionDepart) && batterie < 50) {
-                try {
-                    Thread.sleep(5000);  // Ajoute un délai de 5s pour se recharger
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                block();
+            } else {
+                // Si l'agent est à la base, recharge la batterie
+                if (position.equals(positionDepart) && batterie < batterieMax) {
+                    ClasseUtils.sleep(4000);  // Ajoute un délai de 4s pour se recharger
+                    batterie = batterieMax;
                 }
-                batterie = 50;
-            }
 
-            ACLMessage msg = receive();
-            if (msg != null) {
-                // Réception d'une position de tas à ramasser
-                if (msg.getPerformative() == ACLMessage.REQUEST &&
-                        msg.getSender().getLocalName().equals("superviseur") && msg.getContent().contains("DemandeCollecte")) {
-                    String messageRecu = msg.getContent();
-                    // Récupère les coordonnées du tas de pierres
-                    String coordonnees = messageRecu.split(":")[1];
-                    positionTas = new Point(
-                            Integer.parseInt(coordonnees.split(",")[0]),
-                            Integer.parseInt(coordonnees.split(",")[1])
-                    );
-                    enMission = true;
-                }
-            } else if (enMission) {
-                // Si l'agent est arrivé à la position du tas
-                if (position.equals(positionTas)) {
-                    // Ramasse des cailloux du tas
-                    Case casePierres = carteGUI.getGrille(position.x, position.y);
-                    int nbCaillouxTas = casePierres.getNbCailloux();
-                    // Nombre de cailloux possédés par l'agent
-                    nbCaillouxPossedes = Math.min(3, nbCaillouxTas);
-                    casePierres.setNbCailloux(nbCaillouxTas - nbCaillouxPossedes);
-                    try {
-                        Thread.sleep(2000);  // Ajoute un délai d'2s pour le ramassage
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                ACLMessage msg = receive();
+                if (msg != null) {
+                    // Réception d'une position de tas à ramasser
+                    if (msg.getPerformative() == ACLMessage.REQUEST &&
+                            msg.getSender().getLocalName().equals("superviseur") && msg.getContent().contains("DemandeCollecte")) {
+                        String messageRecu = msg.getContent();
+                        // Récupère les coordonnées du tas de pierres
+                        String coordonnees = messageRecu.split(":")[1];
+                        positionTas = new Point(
+                                Integer.parseInt(coordonnees.split(",")[0]),
+                                Integer.parseInt(coordonnees.split(",")[1])
+                        );
+                        enMission = true;
                     }
-                    batterie-= 3; // Consomme de la batterie
+                } else if (enMission) {
+                    // Si l'agent est arrivé à la position du tas
+                    if (position.equals(positionTas)) {
+                        // Ramasse des cailloux du tas
+                        Case casePierres = carteGUI.getGrille(position.x, position.y);
+                        int nbCaillouxTas = casePierres.getNbCailloux();
+                        // Nombre de cailloux possédés par l'agent
+                        nbCaillouxPossedes = Math.min(3, nbCaillouxTas);
+                        casePierres.setNbCailloux(nbCaillouxTas - nbCaillouxPossedes);
+                        ClasseUtils.sleep(2000); // Ajoute un délai de 2s pour ramasser
+                        batterie -= 3; // Consomme de la batterie
 
-                    // S'il ne reste plus de cailloux dans le tas
-                    if (casePierres.getNbCailloux() == 0) {
-                        // La mission est terminée.
-                        enMission = false;
-                        positionTas = null;
-                        // Envoyer une confirmation au superviseur
-                        ACLMessage confirm = new ACLMessage(ACLMessage.CONFIRM);
-                        confirm.addReceiver(getAID("superviseur"));
-                        confirm.setContent("CaillouxRecup :" + position.x + "," + position.y);
-                        send(confirm);
+                        // S'il ne reste plus de cailloux dans le tas
+                        if (casePierres.getNbCailloux() == 0) {
+                            // La mission est terminée.
+                            enMission = false;
+                            positionTas = null;
+                            // Envoyer une confirmation au superviseur
+                            ACLMessage confirm = new ACLMessage(ACLMessage.CONFIRM);
+                            confirm.addReceiver(getAID("superviseur"));
+                            confirm.setContent("CaillouxRecup :" + position.x + "," + position.y);
+                            send(confirm);
+                        }
+
+                        // Retourne au vaisseau pour déposer les cailloux
+                        while (!position.equals(positionDepart) && !enAttente) {
+                            deplacement(positionDepart);
+                            carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
+                            ClasseUtils.sleep(2000); // Ajoute un délai de 2s pour chaque mouvement car plus lourd
+                        }
+
+                        // Dépose les cailloux au vaisseau
+                        if (position.equals(positionDepart)) {
+                            nbCaillouxTotal += nbCaillouxPossedes;
+                            carteGUI.setNbCailloux(nbCaillouxTotal);
+                        }
+
+                    } else {
+                        // Déplacement vers le tas de cailloux
+                        deplacement(positionTas);
+                        carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
                     }
-
-                    // Retourne au vaisseau pour déposer les cailloux
-                    while (!position.equals(positionDepart)) {
+                    // Si l'agent n'a pas de mission, il retourne à la base
+                } else {
+                    if (!position.equals(positionDepart)) {
                         deplacement(positionDepart);
                         carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
-                        try {
-                            Thread.sleep(2000);  // Ajoute un délai d'2s pour chaque mouvement (plus lourd donc plus de temps)
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                    } else {
+                        // Si l'agent a un tas enregistré, il repart en mission
+                        if (positionTas != null) {
+                            enMission = true;
                         }
                     }
-
-                    // Dépose les cailloux au vaisseau
-                    nbCaillouxTotal += nbCaillouxPossedes;
-
-                } else {
-                    // Déplacement vers le tas de cailloux
-                    deplacement(positionTas);
-                    carteGUI.deplaceRamasseur(id, position.x, position.y); // Met à jour la position de l'agent sur la carte
                 }
-            } else {
-                block();
-            }
-
-            try {
-                Thread.sleep(1000);  // Ajoute un délai d'1s pour chaque mouvement
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                ClasseUtils.sleep(1000); // Ajoute un délai d' 1s entre chaque action
             }
         }
 
@@ -140,34 +133,18 @@ public class RamasseurAgent extends Agent {
                 msg.addReceiver(getAID("superviseur"));
                 msg.setContent("DemandeAide :" + position.x + "," + position.y);
                 send(msg);
-                enAttente = true;
+                enMission = false; // Arrête la mission en cours
+                enAttente = true; // Attend d'être rechargé
                 System.out.println("Agent " + getLocalName() + " envoie une demande d'aide");
 
-                // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
-            } else if (batterie>0 && batterie <= 20) {
-                if (position.x < positionDepart.x) {
-                    position.x++;
-                } else if (position.x > positionDepart.x) {
-                    position.x--;
-                } else if (position.y < positionDepart.y) {
-                    position.y++;
-                } else if (position.y > positionDepart.y) {
-                    position.y--;
-                }
+            // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
+            } else if (batterie > 0 && batterie <= 20) {
+                ClasseUtils.deplacement(position, positionDepart, carteGUI);
                 batterie -= 1 + nbCaillouxPossedes; // Consomme de la batterie
-                System.out.println("Agent " + getLocalName() + " à " + batterie*2 + "% de batterie");
-            } else if(batterie>20){
-                if (position.x < destination.x) {
-                    position.x++;
-                } else if (position.x > destination.x) {
-                    position.x--;
-                } else if (position.y < destination.y) {
-                    position.y++;
-                } else if (position.y > destination.y) {
-                    position.y--;
-                }
+
+            } else if(batterie > 20) {
+                ClasseUtils.deplacement(position, destination, carteGUI);
                 batterie -= 1 + nbCaillouxPossedes; // Consomme de la batterie
-                System.out.println("Agent " + getLocalName() + " à " + batterie*2 + "% de batterie");
             }
         }
     }
@@ -183,8 +160,11 @@ public class RamasseurAgent extends Agent {
                 if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
                     batterie = Integer.parseInt(msg.getContent().split(":")[1]);
                     enAttente = false;
+                } else {
+                    block();
                 }
             }
+            ClasseUtils.sleep(500);
         }
     }
 }
