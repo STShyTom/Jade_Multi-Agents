@@ -7,6 +7,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -17,7 +18,7 @@ public class CaillouxGui extends JPanel {
     private final int longueur;
     private final int hauteur;
     private final int tailleCellule = 40;
-    private final Case[][] grille;
+    private static Case[][] grille;
     // Calque de fond
     private BufferedImage mapLayer;
     // Liste des cases recouvertes par le vaisseau
@@ -270,7 +271,7 @@ public class CaillouxGui extends JPanel {
     /**
      * Retourne la grille des cases
      */
-    public Case getGrille(int x, int y) {
+    public static Case getGrille(int x, int y) {
         return grille[x][y];
     }
 

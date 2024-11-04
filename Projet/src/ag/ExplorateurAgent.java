@@ -80,7 +80,11 @@ public class ExplorateurAgent extends Agent {
             // Si la batterie est inférieure à 10, l'explorateur retourne à la base pour se recharger
             } else if(batterie > 0 && batterie <= 10) {
                 ClasseUtils.deplacement(position, positionDepart, carteGUI);
-                batterie--; // Consomme de la batterie
+                // Consomme de la batterie
+                if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
+                    batterie -= 1 +3;
+                else
+                    batterie -= 1;
 
             } else {
                 int direction = (int) (Math.random() * 4);
@@ -122,7 +126,11 @@ public class ExplorateurAgent extends Agent {
                         }
                         break;
                 }
-                batterie--; // Consomme de la batterie
+                // Consomme de la batterie
+                if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
+                    batterie -= 1 +3;
+                else
+                    batterie -= 1;
             }
         }
     }
@@ -136,7 +144,7 @@ public class ExplorateurAgent extends Agent {
                     enAttente = false;
                 // Attend un partage de batterie d'un chargeur
                 } else if (msg != null && msg.getPerformative() == ACLMessage.PROPOSE) {
-                    batterie += Integer.parseInt(msg.getContent());
+                    batterie += Integer.parseInt(msg.getContent().split(":")[1]);
                     enAttente = false;
                 }
             }

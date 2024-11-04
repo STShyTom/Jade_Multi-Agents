@@ -121,10 +121,16 @@ public class SuperChargeurAgent extends Agent {
             // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
             } else if (batterie > 0 && batterie <= 20) {
                 ClasseUtils.deplacement(position, positionDepart, carteGUI);
-                batterie--; // Consomme de la batterie
+                if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
+                    batterie -= 1+3;
+                else
+                    batterie -= 1;
             } else {
                 ClasseUtils.deplacement(position, destination, carteGUI);
-                batterie--; // Consomme de la batterie
+                if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
+                    batterie -= 1+3;
+                else
+                    batterie -= 1;
             }
         }
     }

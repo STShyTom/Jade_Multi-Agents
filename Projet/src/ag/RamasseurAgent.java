@@ -20,8 +20,8 @@ public class RamasseurAgent extends Agent {
     private Point position;
     private Point positionDepart;
     // Niveau de batterie de l'agent
-    private int batterie = 70;
-    private final int batterieMax = 70;
+    private int batterie = 100;
+    private final int batterieMax = 100;
     private static int nbCaillouxTotal = 0;
     private boolean enAttente = false;
     private boolean enMission = false;
@@ -140,11 +140,19 @@ public class RamasseurAgent extends Agent {
             // Si la batterie est inférieure à 20, l'explorateur retourne à la base pour se recharger
             } else if (batterie > 0 && batterie <= 20) {
                 ClasseUtils.deplacement(position, positionDepart, carteGUI);
-                batterie -= 1 + nbCaillouxPossedes; // Consomme de la batterie
+                // Consomme de la batterie
+                if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
+                    batterie -= 1 + nbCaillouxPossedes+3;
+                else
+                    batterie -= 1 + nbCaillouxPossedes;
 
             } else if(batterie > 20) {
                 ClasseUtils.deplacement(position, destination, carteGUI);
-                batterie -= 1 + nbCaillouxPossedes; // Consomme de la batterie
+                // Consomme de la batterie
+                if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
+                    batterie -= 1 + nbCaillouxPossedes+3;
+                else
+                    batterie -= 1 + nbCaillouxPossedes;
             }
         }
     }
