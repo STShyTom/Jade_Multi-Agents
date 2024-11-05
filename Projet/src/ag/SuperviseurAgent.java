@@ -13,24 +13,22 @@ import java.util.HashMap;
  * Agent superviseur qui gère la communication entre les agents
  */
 public class SuperviseurAgent extends Agent {
-    // Liste des tas de pierres trouvés avec leur position et s'ils sont en cours de collecte
-    private final HashMap<Point, Boolean> tasPierres = new HashMap<>();
+    // Liste des tas de pierres trouvés avec leur position et le ramasseur affecté
+    private final HashMap<Point, String> tasPierres = new HashMap<>();
     // Liste des agents en panne avec leur position
     private final HashMap<String,Point> agentsEnPanne = new HashMap<>();
     // Liste des ramasseurs
-    private final ArrayList<String> ramasseurs = new ArrayList<>();
+    private final HashMap<String, EtatRamasseur> listeRamasseurs = new HashMap<>();
     // Liste des superchargeurs
-    private final ArrayList<String> superChargeurs = new ArrayList<>();
-    // Nombre de cailloux total ramassé
-    private int nbCaillouxRamasses = 0;
+    private final ArrayList<String> listeSuperChargeurs = new ArrayList<>();
 
     @Override
     protected void setup() {
         for (int i = 0; i < 5; i++) {
-            ramasseurs.add("ramasseur" + i);
+            listeRamasseurs.put("ramasseur" + i, EtatRamasseur.NON_AFFECTE);
         }
         for (int i = 0; i < 2; i++) {
-            superChargeurs.add("superchargeur" + i);
+            listeSuperChargeurs.add("superchargeur" + i);
         }
         addBehaviour(new ReceptionMessageBehaviour());
         addBehaviour(new GestionRamasseursBehaviour());
@@ -55,7 +53,7 @@ public class SuperviseurAgent extends Agent {
                             Integer.parseInt(coordonnees.split(",")[1])
                     );
                     if (!tasPierres.containsKey(position)) {
-                        tasPierres.put(position, false);
+                        tasPierres.put(position, "");
                     }
 
                     // Envoie une confirmation à l'explorateur
@@ -63,16 +61,21 @@ public class SuperviseurAgent extends Agent {
                     reply.setPerformative(ACLMessage.CONFIRM);
                     send(reply);
                 }
-                // Réception de la confirmation d'un ramasseur
+                // Réception de la confirmation d'un ramasseur pour aller en mission
                 else if (msg.getPerformative() == ACLMessage.CONFIRM &&
-                        msg.getSender().getLocalName().contains("ramasseur")) {
+                        msg.getContent().contains("GoCollecte")) {
+                    listeRamasseurs.put(msg.getSender().getLocalName(), EtatRamasseur.EN_COURS_DE_COLLECTE);
+                }
+                // Réception de la confirmation de fin de misison pour un ramasseur
+                else if (msg.getPerformative() == ACLMessage.CONFIRM &&
+                        msg.getContent().contains("CaillouxRecup")) {
                     Point positionTas = new Point(
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[0]),
                             Integer.parseInt(msg.getContent().split(":")[1].split(",")[1])
                     );
                     // Il n'y a plus de cailloux dans le tas, le ramasseur peut repartir ailleurs
                     tasPierres.remove(positionTas);
-                    ramasseurs.add(msg.getSender().getLocalName());
+                    listeRamasseurs.put(msg.getSender().getLocalName(), EtatRamasseur.NON_AFFECTE);
                 }
                 // Réception d'une demande de recharge
                 else if (msg.getPerformative() == ACLMessage.REQUEST &&
@@ -88,10 +91,9 @@ public class SuperviseurAgent extends Agent {
                 // Réception de la confirmation d'un superchargeur
                 else if (msg.getPerformative() == ACLMessage.CONFIRM &&
                         msg.getSender().getLocalName().contains("superchargeur")) {
-                    superChargeurs.add(msg.getSender().getLocalName());
+                    listeSuperChargeurs.add(msg.getSender().getLocalName());
                 }
             }
-
             ClasseUtils.sleep(500);
         }
     }
@@ -102,24 +104,44 @@ public class SuperviseurAgent extends Agent {
     private class GestionRamasseursBehaviour extends CyclicBehaviour {
 
         public void action() {
-            // On regarde si des tas sont repérés et s'ils ne sont pas déjà en cours de collecte
+            // On regarde si des tas sont repérés et s'ils ne sont pas déjà affectés à un ramasseur
             boolean tasNonCollecte = false;
             Point tas = new Point();
             for (Point t : tasPierres.keySet()) {
-                if (!tasPierres.get(t)) {
+                if (tasPierres.get(t).isEmpty()) {
                     tasNonCollecte = true;
                     tas = t;
                     break;
+                } else {
+                    // On regarde si le ramasseur est parti collecter le tas
+                    String r = tasPierres.get(t);
+                    if (listeRamasseurs.get(r) != EtatRamasseur.EN_COURS_DE_COLLECTE) {
+                        ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
+                        mission.addReceiver(getAID(r));
+                        mission.setContent("DemandeCollecte :" + t.x + "," + t.y);
+                        send(mission);
+                    }
                 }
             }
-            if (tasNonCollecte && !ramasseurs.isEmpty()) {
-                tasPierres.put(tas, true);
-                String ramasseur = ramasseurs.remove(0);
+
+            // On regarde si des ramasseurs sont disponibles
+            boolean ramasseurDisponible = false;
+            String ramasseur = "";
+            for (String r : listeRamasseurs.keySet()) {
+                if (listeRamasseurs.get(r) == EtatRamasseur.NON_AFFECTE) {
+                    ramasseurDisponible = true;
+                    ramasseur = r;
+                    break;
+                }
+            }
+
+            if (tasNonCollecte && ramasseurDisponible) {
+                listeRamasseurs.put(ramasseur, EtatRamasseur.AFFECTE);
+                tasPierres.put(tas, ramasseur);
                 ACLMessage mission = new ACLMessage(ACLMessage.REQUEST);
                 mission.addReceiver(getAID(ramasseur));
                 mission.setContent("DemandeCollecte :" + tas.x + "," + tas.y);
                 send(mission);
-
             }
             ClasseUtils.sleep(1000);
         }
@@ -133,8 +155,8 @@ public class SuperviseurAgent extends Agent {
         @Override
         public void action() {
             // Envoie un superchargeur si un agent est en panne
-            if (!agentsEnPanne.isEmpty() && !superChargeurs.isEmpty()) {
-                String superChargeur = superChargeurs.remove(0);
+            if (!agentsEnPanne.isEmpty() && !listeSuperChargeurs.isEmpty()) {
+                String superChargeur = listeSuperChargeurs.remove(0);
                 String agentEnPanne = agentsEnPanne.keySet().iterator().next();
                 Point positionAgentEnPanne = agentsEnPanne.get(agentEnPanne);
                 agentsEnPanne.remove(agentEnPanne);
@@ -147,4 +169,13 @@ public class SuperviseurAgent extends Agent {
             }
         }
     }
+}
+
+/**
+ * Enumération des états possibles pour l'affectation d'un tas à un ramasseur
+ */
+enum EtatRamasseur {
+    NON_AFFECTE,
+    AFFECTE,
+    EN_COURS_DE_COLLECTE
 }

@@ -18,8 +18,8 @@ public class ExplorateurAgent extends Agent {
     // Position de l'agent sur la carte
     private Point position;
     // Niveau de batterie de l'agent
-    private int batterie = 60;
-    private final int batterieMax = 60;
+    private int batterie = 80;
+    private final int batterieMax = 80;
     private boolean enAttente = false;
     private Point positionDepart;
 
@@ -77,12 +77,12 @@ public class ExplorateurAgent extends Agent {
                 enAttente = true;
                 System.out.println("Agent " + getLocalName() + " envoie une demande d'aide");
 
-            // Si la batterie est inférieure à 10, l'explorateur retourne à la base pour se recharger
-            } else if(batterie > 0 && batterie <= 10) {
+            // Si la batterie est inférieure à 15, l'explorateur retourne à la base pour se recharger
+            } else if(batterie > 0 && batterie <= 15) {
                 ClasseUtils.deplacement(position, positionDepart, carteGUI);
                 // Consomme de la batterie
                 if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
-                    batterie -= 1 +3;
+                    batterie -= (1 + 3);
                 else
                     batterie -= 1;
 
@@ -128,7 +128,7 @@ public class ExplorateurAgent extends Agent {
                 }
                 // Consomme de la batterie
                 if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
-                    batterie -= 1 +3;
+                    batterie -= (1 + 3);
                 else
                     batterie -= 1;
             }

@@ -63,6 +63,11 @@ public class RamasseurAgent extends Agent {
                                 Integer.parseInt(coordonnees.split(",")[1])
                         );
                         enMission = true;
+                        // Envoie une confirmation au superviseur
+                        ACLMessage reply = msg.createReply();
+                        reply.setPerformative(ACLMessage.CONFIRM);
+                        reply.setContent("GoCollecte");
+                        send(reply);
                     }
                 } else if (enMission) {
                     // Si l'agent est arrivé à la position du tas
@@ -142,17 +147,17 @@ public class RamasseurAgent extends Agent {
                 ClasseUtils.deplacement(position, positionDepart, carteGUI);
                 // Consomme de la batterie
                 if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
-                    batterie -= 1 + nbCaillouxPossedes+3;
+                    batterie -= (1 + nbCaillouxPossedes + 3);
                 else
-                    batterie -= 1 + nbCaillouxPossedes;
+                    batterie -= (1 + nbCaillouxPossedes);
 
             } else if(batterie > 20) {
                 ClasseUtils.deplacement(position, destination, carteGUI);
                 // Consomme de la batterie
                 if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
-                    batterie -= 1 + nbCaillouxPossedes+3;
+                    batterie -= (1 + nbCaillouxPossedes + 3);
                 else
-                    batterie -= 1 + nbCaillouxPossedes;
+                    batterie -= (1 + nbCaillouxPossedes);
             }
         }
     }

@@ -122,13 +122,13 @@ public class SuperChargeurAgent extends Agent {
             } else if (batterie > 0 && batterie <= 20) {
                 ClasseUtils.deplacement(position, positionDepart, carteGUI);
                 if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
-                    batterie -= 1+3;
+                    batterie -= (1 + 3);
                 else
                     batterie -= 1;
             } else {
                 ClasseUtils.deplacement(position, destination, carteGUI);
                 if(!CaillouxGui.getGrille(position.x, position.y).isAccessible())
-                    batterie -= 1+3;
+                    batterie -= (1 + 3);
                 else
                     batterie -= 1;
             }
